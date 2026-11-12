@@ -151,6 +151,7 @@ jobs:
       EXCLUDE_NEWER: ${{ github.event.pull_request.updated_at }}
       # Enable experimental support for installing PEP 723 script dependencies.
       TY_UV: scripts
+      TY_PRIMER_TEST_SOURCE: mypy-primer @ git+https://github.com/StableKite/mypy_primer.git@7ded71c3342160f219bdc888a71e56c66f17a0bb
     steps:
       - uses: $/.github/actions/setup-ruff-workspace
         with:
@@ -164,11 +165,67 @@ jobs:
           pattern: ty-build-*
           merge-multiple: true
 
+      - name: Audit the exact test-only schema installer repair
+        if: github.repository != 'astral-sh/ruff'
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          uv run --locked --only-group=ty-ecosystem python - <<'PY'
+          from dataclasses import asdict
+          import hashlib
+          import importlib.metadata as metadata
+          import json
+          from pathlib import Path
+          import mypy_primer.projects as projects
+          assert metadata.version("mypy-primer") == "0.1.0"
+          assert hashlib.sha256(Path(projects.__file__).read_bytes()).hexdigest() == "ea402a2110f034b8d709b97e291b78fe4c042fd5ddf56a0089e7d3c49f76a899"
+          direct = json.loads(metadata.distribution("mypy-primer").read_text("direct_url.json"))
+          assert direct["vcs_info"]["commit_id"] == "e1f6fe93da5de0cbaf0ab00341d05968a0331fae"
+          catalog = [asdict(project) for project in projects.get_projects()]
+          assert len(catalog) == 163
+          Path("primer-before.json").write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
+          PY
+          uv run --locked --only-group=ty-ecosystem --with "$TY_PRIMER_TEST_SOURCE" python - <<'PY'
+          from dataclasses import asdict
+          import hashlib
+          import importlib.metadata as metadata
+          import json
+          import os
+          from pathlib import Path
+          import mypy_primer.projects as projects
+          assert metadata.version("mypy-primer") == "0.1.0+stablekite.1"
+          assert hashlib.sha256(Path(projects.__file__).read_bytes()).hexdigest() == "703533620c646ffaf7bada3324143a707bf6265204abb8abe94981a7992c6b27"
+          direct = json.loads(metadata.distribution("mypy-primer").read_text("direct_url.json"))
+          assert direct["url"] == "https://github.com/StableKite/mypy_primer.git"
+          assert direct["vcs_info"]["commit_id"] == "7ded71c3342160f219bdc888a71e56c66f17a0bb"
+          before = json.loads(Path("primer-before.json").read_text(encoding="utf-8"))
+          after = json.loads(json.dumps([asdict(project) for project in projects.get_projects()]))
+          assert len(before) == len(after) == 163
+          differences = []
+          for old, new in zip(before, after, strict=True):
+              changed = {key for key in old if old[key] != new[key]}
+              if changed:
+                  assert old["location"] == new["location"] == "https://github.com/common-workflow-language/schema_salad"
+                  assert changed == {"install_cmd", "deps"}
+                  assert new["install_cmd"] == "{install} '.[pycodegen]'"
+                  assert new["deps"] == ["objgraph", "pytest", "setuptools", "types-dataclasses", "types-requests"]
+                  differences.append({"old": old, "new": new})
+          assert len(differences) == 1
+          receipt = {"status": "PASS_GENUINE_INSTALL_ONLY_REPAIR_ALL_163_ANALYSIS_DESCRIPTORS_PRESERVED", "version": metadata.version("mypy-primer"), "direct_url": direct, "only_changes": differences, "same_dependency_for_old_and_new_analysis": True}
+          Path("primer-installer-audit-" + os.environ["SHARD"] + ".json").write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+          print(receipt["status"])
+          PY
+
       - name: Analyze shard ${{ matrix.shard }}
         env:
           SHARD: ${{ matrix.shard }}
           UV_CONSTRAINT: ${{ github.workspace }}/ty-ecosystem-constraints.txt
         run: |
+          test_dependencies=()
+          if [[ "$GITHUB_REPOSITORY" != "astral-sh/ruff" ]]; then
+            test_dependencies=(--with "$TY_PRIMER_TEST_SOURCE")
+          fi
+
           mkdir -p ~/.config/ty
           cp ty-ecosystem.toml ~/.config/ty/ty.toml
 
@@ -179,6 +236,7 @@ jobs:
           uv run \
             --locked \
             --only-group=ty-ecosystem \
+            "${test_dependencies[@]}" \
             ecosystem-analyzer \
             --flaky-runs 10 \
             diff \
@@ -200,6 +258,8 @@ jobs:
           path: |
             diagnostics-base-${{ matrix.shard }}.json
             diagnostics-PR-${{ matrix.shard }}.json
+            primer-before.json
+            primer-installer-audit-${{ matrix.shard }}.json
 
   generate-report:
     name: Generate diagnostic diff report
