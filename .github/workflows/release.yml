@@ -77,7 +77,7 @@ jobs:
   plan:
     permissions:
       "contents": "read"
-    runs-on: "depot-ubuntu-24.04-4"
+    runs-on: ${{ github.repository == 'astral-sh/ruff' && 'depot-ubuntu-24.04-4' || 'ubuntu-latest' }}
     outputs:
       val: ${{ steps.plan.outputs.manifest }}
       tag: ${{ (inputs.tag != 'dry-run' && inputs.tag) || '' }}
@@ -91,6 +91,7 @@ jobs:
           group: jaq
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
+          ref: efff236b671158d0a92c16c78fb6b254082e298b
           persist-credentials: false
           submodules: recursive
       - name: Install dist

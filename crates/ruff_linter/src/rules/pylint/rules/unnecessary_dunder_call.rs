@@ -252,6 +252,7 @@ fn allowed_dunder_constants(dunder_method: &str, target_version: PythonVersion) 
             | "__await__"
             | "__class__"
             | "__class_getitem__"
+            | "__ctypes_from_outparam__"
             | "__delete__"
             | "__dict__"
             | "__doc__"

@@ -1809,7 +1809,7 @@ required-version = "0.1.0"
     )?;
 
     let mut settings = insta::Settings::clone_current();
-    settings.add_filter(version, "[VERSION]");
+    settings.add_filter(&regex::escape(version), "[VERSION]");
     settings.bind(|| {
         assert_cmd_snapshot!(fixture
         .check_command()
@@ -1836,6 +1836,7 @@ import os
 #[test]
 fn required_version_exact_match() -> Result<()> {
     let version = env!("CARGO_PKG_VERSION");
+    let escaped_version = regex::escape(version);
 
     let fixture = CliTest::with_file(
         "ruff.toml",
@@ -1847,7 +1848,7 @@ required-version = "{version}"
     )?;
 
     insta::with_settings!({
-        filters => vec![(version, "[VERSION]")]
+        filters => vec![(escaped_version.as_str(), "[VERSION]")]
     }, {
     assert_cmd_snapshot!(fixture
         .check_command()
@@ -1874,18 +1875,22 @@ import os
 #[test]
 fn required_version_bound_mismatch() -> Result<()> {
     let version = env!("CARGO_PKG_VERSION");
+    let public_version = version
+        .split_once('+')
+        .map_or(version, |(public, _)| public);
 
     let fixture = CliTest::with_file(
         "ruff.toml",
         &format!(
             r#"
-required-version = ">{version}"
+required-version = ">{public_version}"
 "#
         ),
     )?;
 
     let mut settings = insta::Settings::clone_current();
-    settings.add_filter(version, "[VERSION]");
+    settings.add_filter(&regex::escape(version), "[VERSION]");
+    settings.add_filter(&regex::escape(public_version), "[VERSION]");
     settings.bind(|| {
         assert_cmd_snapshot!(fixture
         .check_command()
@@ -1912,12 +1917,15 @@ import os
 #[test]
 fn required_version_precedes_rule_validation() -> Result<()> {
     let version = env!("CARGO_PKG_VERSION");
+    let public_version = version
+        .split_once('+')
+        .map_or(version, |(public, _)| public);
 
     let fixture = CliTest::with_file(
         "ruff.toml",
         &format!(
             r#"
-required-version = ">{version}"
+required-version = ">{public_version}"
 
 [lint]
 select = ["RUF999"]
@@ -1926,7 +1934,8 @@ select = ["RUF999"]
     )?;
 
     let mut settings = insta::Settings::clone_current();
-    settings.add_filter(version, "[VERSION]");
+    settings.add_filter(&regex::escape(version), "[VERSION]");
+    settings.add_filter(&regex::escape(public_version), "[VERSION]");
     settings.bind(|| {
         assert_cmd_snapshot!(fixture
         .check_command()
