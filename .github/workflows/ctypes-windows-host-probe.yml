@@ -1,0 +1,73 @@
+name: Diagnose unchanged Windows constraint test
+
+permissions:
+  contents: read
+
+cache-mode: read
+
+on:
+  push:
+    branches: [stablekite/ctypes-windows-host-probe-v1]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  UV_LOCKED: 1
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  CARGO_PROFILE_DEV_LTO: "false"
+  CARGO_PROFILE_DEV_OPT_LEVEL: 0
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_TERM_COLOR: always
+  RUSTUP_MAX_RETRIES: 10
+  RUST_BACKTRACE: 1
+  PYTHON_VERSION: "3.14"
+  NEXTEST_PROFILE: ci
+  MDTEST_EXTERNAL: "1"
+
+jobs:
+  original-constraint-case:
+    name: ${{ matrix.host }} (${{ matrix.source }})
+    runs-on: ${{ matrix.host }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [windows-2022, windows-latest]
+        source:
+          - 05cdc36a45a29e078c2af9358969d0f576408bef
+          - efff236b671158d0a92c16c78fb6b254082e298b
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.source }}
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          save-if: false
+          cache-bin: "false"
+      - name: Install original Rust toolchain
+        run: rustup show
+      - uses: $/.github/actions/setup-ruff-workspace
+        with:
+          enable-cache: "true"
+          cache-python: true
+      - name: Record genuine source, host, and unchanged timeout configuration
+        run: |
+          git rev-parse HEAD
+          git status --porcelain
+          python - <<'PY'
+          import hashlib
+          import os
+          from pathlib import Path
+          import platform
+          print({"platform": platform.platform(), "logical_cpus": os.cpu_count()})
+          for name in (".config/nextest.toml", "crates/ty_python_semantic/resources/mdtest/type_properties/constraints.md"):
+              print(name, hashlib.sha256(Path(name).read_bytes()).hexdigest())
+          PY
+      - name: Run one unchanged original case with the original 60-second CI profile
+        run: |
+          uv run --locked --only-dev cargo nextest run --all-features --profile ci -E 'package(ty_python_semantic) and binary(mdtest) and test(=mdtest::type_properties/constraints.md)'
