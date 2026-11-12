@@ -1,0 +1,16 @@
+---
+source: crates/ruff_linter/src/rules/pylint/mod.rs
+---
+PLC2801 [*] Unnecessary dunder call to `__str__`. Use `str()` builtin.
+  --> bad_dunder_method_name_ctypes.py:51:12
+   |
+50 | def stringify(value):
+51 |     return value.__str__()
+   |            ^^^^^^^^^^^^^^^
+help: Use `str()` builtin
+   |
+50 | def stringify(value):
+   -     return value.__str__()
+51 +     return str(value)
+   |
+note: This is an unsafe fix and may change runtime behavior

@@ -18,6 +18,7 @@ use tempfile::TempDir;
 mod analyze_graph;
 mod format;
 mod lint;
+mod normalization;
 mod show_settings;
 mod version;
 
@@ -26,6 +27,13 @@ const BIN_NAME: &str = "ruff";
 /// Creates a regex filter for replacing temporary directory paths in snapshots
 pub(crate) fn tempdir_filter(path: impl AsRef<str>) -> String {
     format!(r"{}[\\/]?", regex::escape(path.as_ref()))
+}
+
+fn missing_file_error_filter() -> String {
+    format!(
+        r"(?m){}$",
+        regex::escape(&std::io::Error::from_raw_os_error(2).to_string())
+    )
 }
 
 /// A test fixture for running ruff CLI tests with temporary directories and files.
@@ -94,10 +102,10 @@ impl CliTest {
         );
         settings.add_filter(r#"\\([\w&&[^nr"]]\w|\s|\.)"#, "/$1");
         settings.add_filter(r"(Panicked at) [^:]+:\d+:\d+", "$1 <location>");
-        settings.add_filter(ruff_linter::VERSION, "[VERSION]");
+        settings.add_filter(&regex::escape(ruff_linter::VERSION), "[VERSION]");
         settings.add_filter(
-            r#"The system cannot find the file specified."#,
-            "No such file or directory",
+            &missing_file_error_filter(),
+            "No such file or directory (os error 2)",
         );
 
         let settings_scope = settings.bind_to_scope();
