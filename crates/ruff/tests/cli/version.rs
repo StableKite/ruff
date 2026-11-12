@@ -92,6 +92,13 @@ fn isolated_option_allowed() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn version_line_filter(version: &str) -> String {
+    format!(
+        r"(?m)^ruff {}(\+\d+)?( \(\w{{9}} \d{{4}}-\d{{2}}-\d{{2}}\))?$",
+        regex::escape(version)
+    )
+}
+
 struct VersionTest {
     cli_test: CliTest,
 }
@@ -100,10 +107,7 @@ impl VersionTest {
     fn new() -> anyhow::Result<Self> {
         Ok(Self {
             cli_test: CliTest::with_settings(|_, mut settings| {
-                settings.add_filter(
-                    r"\d+\.\d+\.\d+(\+\d+)?( \(\w{9} \d\d\d\d-\d\d-\d\d\))?",
-                    "[VERSION]",
-                );
+                settings.add_filter(&version_line_filter(ruff_linter::VERSION), "ruff [VERSION]");
                 settings
             })?,
         })
@@ -114,6 +118,29 @@ impl VersionTest {
         test.write_file(path, content)?;
         Ok(test)
     }
+}
+
+#[test]
+fn version_line_filter_matches_only_the_actual_literal_version() -> anyhow::Result<()> {
+    for version in ["0.17.4", "0.17.4+stablekite.1"] {
+        let filter = regex::Regex::new(&version_line_filter(version))?;
+        for suffix in ["", " (abcdef123 2026-11-12)", "+1 (abcdef123 2026-11-12)"] {
+            let line = format!("ruff {version}{suffix}");
+            assert_eq!(
+                filter.replace_all(&line, "ruff [VERSION]"),
+                "ruff [VERSION]"
+            );
+        }
+        for line in [
+            format!("ruff {version}1"),
+            format!("ruff {version} unexpected"),
+            format!("other ruff {version}"),
+            format!("ruff {}", version.replace('.', "x")),
+        ] {
+            assert!(!filter.is_match(&line), "{line}");
+        }
+    }
+    Ok(())
 }
 
 impl std::ops::Deref for VersionTest {

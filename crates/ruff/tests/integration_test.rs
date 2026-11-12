@@ -1922,8 +1922,12 @@ fn check_existing_at_paths_are_literal() -> Result<()> {
 // Regression test for https://github.com/astral-sh/ruff/issues/20655
 fn missing_argfile_reports_error() {
     let mut cmd = RuffCheck::default().filename("@!.txt").build();
+    let missing_file = format!(
+        r"(?m){}$",
+        regex::escape(&std::io::Error::from_raw_os_error(2).to_string())
+    );
     insta::with_settings!({filters => vec![
-        ("The system cannot find the file specified.", "No such file or directory")
+        (missing_file.as_str(), "No such file or directory (os error 2)")
     ]}, {
         assert_cmd_snapshot!(cmd, @"
         success: false

@@ -1,0 +1,71 @@
+---
+source: crates/ruff_linter/src/rules/pylint/mod.rs
+---
+PLW3201 Dunder method `__ctypes_from_outparam_` has no special meaning in Python 3
+  --> bad_dunder_method_name_ctypes.py:23:9
+   |
+22 | class InvalidNames:
+23 |     def __ctypes_from_outparam_(self):
+   |         ^^^^^^^^^^^^^^^^^^^^^^^
+24 |         pass
+   |
+
+PLW3201 Dunder method `_ctypes_from_outparam__` has no special meaning in Python 3
+  --> bad_dunder_method_name_ctypes.py:26:9
+   |
+24 |         pass
+25 |
+26 |     def _ctypes_from_outparam__(self):
+   |         ^^^^^^^^^^^^^^^^^^^^^^^
+27 |         pass
+   |
+
+PLW3201 Dunder method `___ctypes_from_outparam__` has no special meaning in Python 3
+  --> bad_dunder_method_name_ctypes.py:29:9
+   |
+27 |         pass
+28 |
+29 |     def ___ctypes_from_outparam__(self):
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+30 |         pass
+   |
+
+PLW3201 Dunder method `_ctypes_from_outparam_` has no special meaning in Python 3
+  --> bad_dunder_method_name_ctypes.py:32:9
+   |
+30 |         pass
+31 |
+32 |     def _ctypes_from_outparam_(self):
+   |         ^^^^^^^^^^^^^^^^^^^^^^
+33 |         pass
+   |
+
+PLW3201 Dunder method `__ctypes_from_outparams__` has no special meaning in Python 3
+  --> bad_dunder_method_name_ctypes.py:35:9
+   |
+33 |         pass
+34 |
+35 |     def __ctypes_from_outparams__(self):
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+36 |         pass
+   |
+
+PLW3201 Dunder method `__ctypes_from_inparam__` has no special meaning in Python 3
+  --> bad_dunder_method_name_ctypes.py:38:9
+   |
+36 |         pass
+37 |
+38 |     def __ctypes_from_inparam__(self):
+   |         ^^^^^^^^^^^^^^^^^^^^^^^
+39 |         pass
+   |
+
+PLW3201 Dunder method `__not_a_native_protocol__` has no special meaning in Python 3
+  --> bad_dunder_method_name_ctypes.py:41:9
+   |
+39 |         pass
+40 |
+41 |     def __not_a_native_protocol__(self):
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+42 |         pass
+   |

@@ -253,6 +253,7 @@ pub(super) fn is_known_dunder_method(method: &str) -> bool {
         | "__complex__"
         | "__contains__"
         | "__copy__"
+        | "__ctypes_from_outparam__"
         | "__deepcopy__"
         | "__del__"
         | "__delattr__"
