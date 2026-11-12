@@ -797,7 +797,7 @@ jobs:
         needs.determine_changes.outputs.linter == 'true' ||
         needs.determine_changes.outputs.formatter == 'true'
       )
-    timeout-minutes: 20
+    timeout-minutes: ${{ github.repository == 'astral-sh/ruff' && 20 || 60 }}
     env:
       # Line-tables-only debug info: faster builds, backtraces still work.
       CARGO_PROFILE_DEV_DEBUG: line-tables-only
