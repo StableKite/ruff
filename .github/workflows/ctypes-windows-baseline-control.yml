@@ -1,0 +1,69 @@
+name: Original Windows baseline with reviewed executor allocation
+
+permissions:
+  contents: read
+
+cache-mode: read
+
+on:
+  push:
+    branches: [stablekite/ctypes-windows-baseline-control-v1]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  UV_LOCKED: 1
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  CARGO_PROFILE_DEV_LTO: "false"
+  CARGO_PROFILE_DEV_OPT_LEVEL: 0
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_TERM_COLOR: always
+  RUSTUP_MAX_RETRIES: 10
+  RUST_BACKTRACE: 1
+  PYTHON_VERSION: "3.14"
+  NEXTEST_PROFILE: ci
+  MDTEST_EXTERNAL: "1"
+  NEXTEST_TEST_THREADS: 2
+
+jobs:
+  original-full-windows:
+    name: Full unchanged 0.17.4 Windows baseline
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 05cdc36a45a29e078c2af9358969d0f576408bef
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          save-if: false
+          cache-bin: "false"
+      - name: Install original Rust toolchain
+        run: rustup show
+      - uses: $/.github/actions/setup-ruff-workspace
+        with:
+          enable-cache: "true"
+          cache-python: true
+      - name: Record genuine baseline and unchanged timeout configuration
+        run: |
+          git rev-parse HEAD
+          git status --porcelain
+          python - <<'PY'
+          import hashlib
+          import os
+          from pathlib import Path
+          import platform
+          print({"platform": platform.platform(), "logical_cpus": os.cpu_count(), "executor_processes": os.environ["NEXTEST_TEST_THREADS"]})
+          assert os.cpu_count() == 4
+          for name in (".config/nextest.toml", "crates/ty_python_semantic/resources/mdtest/type_properties/constraints.md"):
+              print(name, hashlib.sha256(Path(name).read_bytes()).hexdigest())
+          PY
+      - name: Run all original Windows tests and doctests
+        run: |
+          uv run --locked --only-dev cargo nextest run --all-features --profile ci
+          cargo test --all-features --doc
