@@ -20,14 +20,16 @@ env:
   CARGO_NET_RETRY: 10
   CARGO_PROFILE_DEV_LTO: "false"
   CARGO_PROFILE_DEV_OPT_LEVEL: 0
-  CARGO_PROFILE_DEV_DEBUG: line-tables-only
   CARGO_TERM_COLOR: always
+  HAWK_VERSION: 0.1.17
   RUSTUP_MAX_RETRIES: 10
-  RUST_BACKTRACE: 1
+  PACKAGE_NAME: ruff
   PYTHON_VERSION: "3.14"
+  FUZZ_CORPUS_SEEDS: 0-20000
   NEXTEST_PROFILE: ci
   MDTEST_EXTERNAL: "1"
-  NEXTEST_TEST_THREADS: 2
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  NEXTEST_TEST_THREADS: "2"
 
 jobs:
   original-full-windows:
@@ -58,7 +60,7 @@ jobs:
           import os
           from pathlib import Path
           import platform
-          print({"platform": platform.platform(), "logical_cpus": os.cpu_count(), "executor_processes": os.environ["NEXTEST_TEST_THREADS"]})
+          print({"platform": platform.platform(), "logical_cpus": os.cpu_count(), "executor_processes": os.environ["NEXTEST_TEST_THREADS"], "rust_backtrace": os.environ.get("RUST_BACKTRACE")})
           assert os.cpu_count() == 4
           for name in (".config/nextest.toml", "crates/ty_python_semantic/resources/mdtest/type_properties/constraints.md"):
               print(name, hashlib.sha256(Path(name).read_bytes()).hexdigest())
