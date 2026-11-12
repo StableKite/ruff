@@ -1,0 +1,41 @@
+name: i686 CentOS repository probe
+
+on:
+  push:
+    branches: [stablekite/ctypes-i686-network-probe-v1]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repository-network:
+    name: Repository access (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-latest]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    env:
+      IMAGE: quay.io/pypa/manylinux2014_i686@sha256:1e7424bb933e3de581e12da0db9487631ebb637d686010d6a69f54c9d1606af2
+    steps:
+      - name: Record the host and its normal resolver
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat /etc/os-release
+          uname -a
+          docker version
+          getent hosts vault.centos.org
+      - name: Exercise the original image and dependency command
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash "$IMAGE" -lc '
+            set -euxo pipefail
+            getconf LONG_BIT
+            cat /etc/resolv.conf
+            getent hosts vault.centos.org
+            yum install -y libatomic
+          '
