@@ -588,6 +588,9 @@ jobs:
           cache-python: true
       - name: "Run tests"
         run: |
+          if [[ "$GITHUB_REPOSITORY" != "astral-sh/ruff" && "$RUNNER_OS" == "Windows" ]]; then
+            export NEXTEST_TEST_THREADS=2
+          fi
           uv run --locked --only-dev cargo nextest run --all-features --profile ci
           cargo test --all-features --doc
 
